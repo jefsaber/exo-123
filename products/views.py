@@ -54,6 +54,13 @@ from .serializers import ProductSerializer, ReviewSerializer
                 type=str,
                 location=OpenApiParameter.QUERY,
             ),
+            OpenApiParameter(
+                name="min_rating",
+                description="Filtrer par note moyenne minimale",
+                required=False,
+                type=float,
+                location=OpenApiParameter.QUERY,
+            ),
         ],
     ),
     retrieve=extend_schema(
@@ -143,6 +150,26 @@ class ProductViewSet(viewsets.ModelViewSet):
                 pass
         return qs
  
+    @extend_schema(
+        tags=["Products"],
+        summary="Obtenir la note moyenne d'un produit",
+        description="Retourne la note moyenne et le nombre total d'avis pour un produit",
+        responses={
+            200: OpenApiResponse(
+                description="Note moyenne et nombre d'avis",
+                examples=[
+                    OpenApiExample(
+                        "Exemple de réponse",
+                        value={
+                            "product_id": 1,
+                            "avg_rating": 4.5,
+                            "count": 10
+                        }
+                    )
+                ]
+            )
+        }
+    )
     @decorators.action(detail=True, methods=["get"], url_path="rating")
     def rating(self, request, pk=None):
         product = self.get_object()
@@ -154,6 +181,18 @@ class ProductViewSet(viewsets.ModelViewSet):
             "count": product.reviews.count(),
         }
         return response.Response(data)
+    
+    @extend_schema(
+        tags=["Products"],
+        summary="Lister les avis d'un produit",
+        description="Retourne tous les avis associés à un produit, triés par date de création décroissante",
+        responses={
+            200: OpenApiResponse(
+                response=ReviewSerializer(many=True),
+                description="Liste des avis"
+            )
+        }
+    )
  
     @decorators.action(detail=True, methods=["get"], url_path="reviews")
     def product_reviews(self, request, pk=None):
