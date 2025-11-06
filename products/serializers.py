@@ -40,6 +40,13 @@ class ReviewSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if request and request.method == "POST":
             product = attrs.get("product")
+            # Prevent reviewing your own product if product exposes a seller/owner/user attribute
+            if product is not None:
+                seller = getattr(product, "seller", None) or getattr(product, "user", None) or getattr(product, "owner", None)
+                if seller is not None and request.user == seller:
+                    raise serializers.ValidationError(
+                        "Vous ne pouvez pas laisser un avis sur votre propre produit."
+                    )
             if (
                 product
                 and Review.objects.filter(product=product, user=request.user).exists()

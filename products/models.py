@@ -13,6 +13,7 @@ class Review(models.Model):
     product = models.ForeignKey('products.Product', on_delete=models.CASCADE, related_name='reviews')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reviews')
     rating = models.PositiveSmallIntegerField()
+    title = models.CharField(max_length=200, blank=True, null=True)
     comment = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
  

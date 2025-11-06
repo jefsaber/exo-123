@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, filters, response, decorators, status
+from rest_framework import viewsets, permissions, filters, response, decorators, status, throttling
 from rest_framework.parsers import JSONParser
 from rest_framework.renderers import JSONRenderer
 from rest_framework_xml.parsers import XMLParser
@@ -8,6 +8,8 @@ from django_filters.rest_framework import DjangoFilterBackend
  
 from django.db.models import Avg, Count, FloatField
 from django.db.models.functions import Coalesce
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
  
 from .models import Review
 from .permissions import IsOwnerOrReadOnly
@@ -170,6 +172,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
         }
     )
+    @method_decorator(cache_page(30))
     @decorators.action(detail=True, methods=["get"], url_path="rating")
     def rating(self, request, pk=None):
         product = self.get_object()
@@ -208,6 +211,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.select_related("product", "user").all()
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    # Accept JSON & XML; render JSON & XML
+    parser_classes = [JSONParser, XMLParser]
+    renderer_classes = [JSONRenderer, XMLRenderer]
+
+    # Allow ordering and pagination (default pagination class from settings)
+    filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
+    ordering_fields = ["created_at", "rating"]
+    ordering = ["-created_at"]
+
+    # Lightweight throttling for creation of reviews
+    throttle_classes = [throttling.UserRateThrottle]
+    throttle_scope = "reviews"
  
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
